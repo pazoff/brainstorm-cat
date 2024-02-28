@@ -1,0 +1,9 @@
+{
+    "name": "BrainStorm Cat",
+    "description": "BrainStorm Cat suggests ideas for a given topic on a given interval of time as the topic changes relevantly. How to use it? Just type @brainstorm",
+    "author_name": "Pazoff",
+    "tags": "ideas,brainstorming",
+    "plugin_url": "https://github.com/pazoff/brainstorm-cat",
+    "thumb": "",
+    "version": "0.0.1"
+}
