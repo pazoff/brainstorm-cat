@@ -40,7 +40,7 @@ def do_brainstorming(cat, interval_seconds, brainstorm_on):
            cat.send_ws_message(content=f'Brainstorming on {related_on} ...', msg_type='chat_token')
            branestorm_result = cat.llm(f'Brainstorm great ideas based on {related_on}') 
            cat.send_ws_message(content=f'<b>BrainStorm Cat</b><br>Brainstorming on <b>{related_on}</b><br><br>{branestorm_result}', msg_type='chat')
-           related_on = cat.llm(f'Write 1 question related to {related_on}, but promoting diffrent ideas.')
+           related_on = cat.llm(f'Write 1 question related to {related_on}.')
             
         except Exception as e:
             print("BrainStorm Cat: ERROR: ", e)
