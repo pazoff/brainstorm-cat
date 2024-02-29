@@ -1,3 +1,4 @@
 {
-    "brainStorm_interval_seconds": 30
+    "brainStorm_interval_seconds": 30,
+    "related_topics_depth": 1
 }

@@ -7,10 +7,12 @@ from pydantic import BaseModel
 
 # Default values
 default_brainStorm_interval_seconds = 30
+default_related_topics_depth = 1
 
 
 class BrainStormCatSettings(BaseModel):
     brainStorm_interval_seconds: int = default_brainStorm_interval_seconds
+    related_topics_depth: int = default_related_topics_depth
     
 
 # Give your settings schema to the Cat.
@@ -31,26 +33,34 @@ def stop_checking():
         print("Error while stopping checking:", e)
         return False
 
-def do_brainstorming(cat, interval_seconds, brainstorm_on):
+def do_brainstorming(cat, interval_seconds, brainstorm_on, related_topics_depth):
     global stop_flag, alert_thread
     related_on = brainstorm_on
-    
+    related_depth = related_topics_depth
+
     while not stop_flag.is_set():
         try:
-           cat.send_ws_message(content=f'Brainstorming on {related_on} ...', msg_type='chat_token')
-           branestorm_result = cat.llm(f'Brainstorm great ideas based on {related_on}') 
-           cat.send_ws_message(content=f'<b>BrainStorm Cat</b><br>Brainstorming on <b>{related_on}</b><br><br>{branestorm_result}', msg_type='chat')
-           related_on = cat.llm(f'Write 1 question related to {related_on}.')
-            
+            cat.send_ws_message(content=f'Brainstorming on {related_on} ...', msg_type='chat_token')
+            branestorm_result = cat.llm(f'Brainstorm great ideas based on {related_on}')
+            cat.send_ws_message(content=f'<b>BrainStorm Cat</b><br>Brainstorming on <b>{related_on}</b><br><br>{branestorm_result}', msg_type='chat')
+            if related_depth > 0:
+                related_on = cat.llm(f'Write a question related to {related_on}.')
+                related_depth = related_depth - 1
+                log.info(f"BrainStorm Cat: [{related_depth}] NEXT brainstorming on related topic {related_on}.")
+            else:
+                related_on = cat.llm(f'Write a question related to {brainstorm_on} diffrent from {related_on}.')
+                related_depth = related_topics_depth
+                log.info(f"BrainStorm Cat: NEXT returning to original brainstorming topic {brainstorm_on} - {related_on}.")
+
         except Exception as e:
             print("BrainStorm Cat: ERROR: ", e)
-        
-    
+
         stop_flag.wait(interval_seconds)
 
     stop_flag.clear()
-    
+
     cat.send_ws_message(content='<b>BrainStorm Cat:</b> Brainstorming STOPPED', msg_type='chat')
+
 
 @hook
 def agent_fast_reply(fast_reply, cat):
@@ -64,10 +74,13 @@ def agent_fast_reply(fast_reply, cat):
         # Load settings
         settings = cat.mad_hatter.get_plugin().load_settings()
         brainStorm_interval_seconds = settings.get("brainStorm_interval_seconds")
+        related_topics_depth = settings.get("related_topics_depth")
         
         # Set default value for missing or invalid setting
         if (brainStorm_interval_seconds is None) or (brainStorm_interval_seconds < 30):
             brainStorm_interval_seconds = default_brainStorm_interval_seconds
+        if (related_topics_depth is None) or (related_topics_depth < 1):
+            related_topics_depth = default_related_topics_depth
     
         if message.startswith('@brainstorm stop'):
             if alert_thread is not None and alert_thread.is_alive():
@@ -86,7 +99,7 @@ def agent_fast_reply(fast_reply, cat):
             if alert_thread is None or not alert_thread.is_alive():
                 brainstorm_on = message[len("@brainstorm "):] 
                 if brainstorm_on != "":
-                    alert_thread = threading.Thread(target=do_brainstorming, args=(cat, brainStorm_interval_seconds, brainstorm_on))
+                    alert_thread = threading.Thread(target=do_brainstorming, args=(cat, brainStorm_interval_seconds, brainstorm_on, related_topics_depth))
                     alert_thread.start()
                     more_info = "<br><br>To stop Brainstorming, type <b>@brainstorm stop</b> in the chat."
                     return {"output": f"Brainstorming <b>ON</b><br>New ideas based on <b>{brainstorm_on}</b> are comming every {brainStorm_interval_seconds} seconds." + more_info}
